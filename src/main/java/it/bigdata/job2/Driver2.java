@@ -1,16 +1,27 @@
 package it.bigdata.job2;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 public class Driver2 {
     public static void main(String[] args) throws Exception {
-        Job job = Job.getInstance(new Configuration(), "Job2");
+        // args[0] = cartella input CSV, args[1] = cartella output
+        Configuration conf = new Configuration();
+        // toglie da args le opzioni generiche di Hadoop (-fs, -jt, -D ...) e le mette in conf
+        args = new GenericOptionsParser(conf, args).getRemainingArgs();
+        if (args.length < 2) {
+            System.err.println("Uso: Driver2 <input> <output>");
+            System.exit(2);
+        }
+
+        Job job = Job.getInstance(conf, "Job2");
         job.setJarByClass(Driver2.class);
 
         job.setMapperClass(Mapper2.class);
@@ -22,8 +33,17 @@ public class Driver2 {
         job.setOutputValueClass(IntWritable.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        Path out = new Path(args[1]);
+        FileSystem fs = out.getFileSystem(conf);
+        if (fs.exists(out)) fs.delete(out, true);    // cancella l'output vecchio
+        FileOutputFormat.setOutputPath(job, out);
+
+        long inizio = System.currentTimeMillis();
+        boolean ok = job.waitForCompletion(true);
+        long durata = System.currentTimeMillis() - inizio;
+        System.out.println("TEMPO_MS " + durata);
+
+        System.exit(ok ? 0 : 1);
     }
 }

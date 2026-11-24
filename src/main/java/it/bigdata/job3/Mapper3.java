@@ -47,12 +47,16 @@ public class Mapper3 extends Mapper<LongWritable, Text, Text, LongWritable> {
         List<String> f = CsvUtil.parse(value.toString());
         if (f.size() < 10) return;
 
+        String nome = categorie.get(f.get(4).trim());
+        if (nome == null) return;                    // id categoria non presente nel JSON (o riga intestazione)
 
+        try {
+            view.set(Long.parseLong(f.get(7).trim()));
+        } catch (NumberFormatException e) {
+            return;                                  // "views" non numerico: intestazione o riga spezzata
+        }
 
-
-        view.set(Long.parseLong(f.get(7).trim()));
-
-        categoryName.set(categorie.get(f.get(4).trim()));
+        categoryName.set(nome);
         ctx.write(categoryName, view);
     }
 }

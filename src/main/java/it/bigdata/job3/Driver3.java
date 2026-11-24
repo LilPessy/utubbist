@@ -9,11 +9,18 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 public class Driver3 {
     public static void main(String[] args) throws Exception {
         // args[0] = input CSV, args[1] = cartella output, args[2] = cartella dei JSON
         Configuration conf = new Configuration();
+        // toglie da args le opzioni generiche di Hadoop (-fs, -jt, -D ...) e le mette in conf
+        args = new GenericOptionsParser(conf, args).getRemainingArgs();
+        if (args.length < 3) {
+            System.err.println("Uso: Driver3 <input> <output> <cartella json>");
+            System.exit(2);
+        }
         conf.set("categorie.dir", args[2]);          // letto dal Mapper3 nel setup()
 
         Job job = Job.getInstance(conf, "Job3");
@@ -37,6 +44,11 @@ public class Driver3 {
         if (fs.exists(out)) fs.delete(out, true);    // cancella l'output vecchio
         FileOutputFormat.setOutputPath(job, out);
 
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        long inizio = System.currentTimeMillis();
+        boolean ok = job.waitForCompletion(true);
+        long durata = System.currentTimeMillis() - inizio;
+        System.out.println("TEMPO_MS " + durata);
+
+        System.exit(ok ? 0 : 1);
     }
 }
