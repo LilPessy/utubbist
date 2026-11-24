@@ -18,6 +18,11 @@
             <artifactId>hadoop-client</artifactId>
             <version>3.5.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.18.6</version>
+        </dependency>
     </dependencies>
 
 </project>
