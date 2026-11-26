@@ -95,6 +95,30 @@ carica_se_manca() {      # $1 = cartella locale, $2 = cartella HDFS
 carica_se_manca "$DATA_DIR/in3"  "$HDFS_ALL"
 carica_se_manca "$DATA_DIR/json" "$HDFS_JSON"
 
+# Ogni CSV su HDFS deve essere un FILE. Se un job è stato lanciato per
+# sbaglio con output = /yt/in3/XXvideos.csv, il Driver ha cancellato il CSV
+# e al suo posto c'è una cartella col risultato del job: in quel caso
+# in3 fallisce ("Path is not a file") e in1/in2 leggono dati sbagliati.
+# Qui lo controllo e, se serve, ricarico il CSV giusto.
+for F in "$DATA_DIR"/in3/*.csv; do
+    NOME="$(basename "$F")"
+    if ! hdfs dfs -test -f "$HDFS_ALL/$NOME"; then
+        echo ">> $HDFS_ALL/$NOME manca o non è un file: lo ricarico"
+        hdfs dfs -rm -r -skipTrash "$HDFS_ALL/$NOME" >/dev/null 2>&1
+        hdfs dfs -put "$F" "$HDFS_ALL/" || { echo "ERRORE nel caricamento di $NOME"; exit 1; }
+    fi
+done
+
+# Spazio libero per il DataNode. Ogni blocco in scrittura prenota 128 MB:
+# se il disco del Mac è quasi pieno il DataNode rifiuta le scritture e i job
+# falliscono con "could only be written to 0 of the 1 minReplication nodes".
+LIBERO=$(hdfs dfsadmin -report 2>/dev/null | awk -F'[:(]' '/^DFS Remaining:/{print $2; exit}' | tr -d ' ')
+if [ -n "$LIBERO" ] && [ "$LIBERO" -lt $((1024*1024*1024)) ]; then
+    echo "ERRORE: HDFS ha solo $((LIBERO/1024/1024)) MB liberi (servono almeno 1024 MB)."
+    echo "        Libera spazio sul disco del Mac e rilancia."
+    exit 1
+fi
+
 # ---------- 4. Esecuzione delle prove -----------------------------------
 mkdir -p "$LOG_DIR" "$RIS_DIR"
 echo "job,input,run,tempo_job_ms,tempo_wall_ms,esito,application_id" > "$CSV"

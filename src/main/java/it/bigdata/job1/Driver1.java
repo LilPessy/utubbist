@@ -32,7 +32,13 @@ public class Driver1 {
 
         Path out = new Path(args[1]);
         FileSystem fs = out.getFileSystem(conf);
-        if (fs.exists(out)) fs.delete(out, true);    // cancella l'output vecchio
+        if (fs.exists(out)) {
+            // Cancello solo una CARTELLA di output vecchia: se out è un file
+            // (es. un CSV di input passato per sbaglio come output) mi fermo.
+            if (!fs.getFileStatus(out).isDirectory())
+                throw new IllegalArgumentException("L'output " + out + " è un file, non lo cancello: controlla l'ordine degli argomenti");
+            fs.delete(out, true);                        // cancella l'output vecchio
+        }
         FileOutputFormat.setOutputPath(job, out);
 
         long inizio = System.currentTimeMillis();

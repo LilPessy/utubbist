@@ -10,7 +10,7 @@ public class Mapper1 extends Mapper<LongWritable, Text, Text, NullWritable> {
     private final Text title = new Text();
 
     @Override
-    protected void map(LongWritable key, Text value, Context ctx) throws IOException{
+    protected void map(LongWritable key, Text value, Context ctx) throws IOException, InterruptedException {
 
         List<String> f = CsvUtil.parse(value.toString());
 
@@ -26,8 +26,9 @@ public class Mapper1 extends Mapper<LongWritable, Text, Text, NullWritable> {
                 ctx.write(title, NullWritable.get());
             }
 
-        }catch (RuntimeException | InterruptedException e){
-            e.printStackTrace(System.out);
+        } catch (NumberFormatException e) {
+            // riga di intestazione o riga CSV spezzata (descrizione su più righe):
+            // la salto senza stampare lo stack trace, che riempiva il log
         }
     }
 }
